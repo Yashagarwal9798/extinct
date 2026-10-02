@@ -1,0 +1,73 @@
+# Mini-Instinct: everything runs on your PC.
+# Ports are bound to 127.0.0.1 only: nothing is reachable from your network or the internet.
+
+services:
+  temporal:
+    image: temporalio/temporal:1.9.1
+    # Dev server: Temporal + Web UI in one process, state in a SQLite file on the volume.
+    command: >
+      server start-dev
+      --ip 0.0.0.0
+      --db-filename /home/temporal/temporal.db
+    volumes:
+      # Mounted at the image user's home dir so the non-root "temporal" user can write to it.
+      - temporal-data:/home/temporal
+    ports:
+      - "127.0.0.1:7233:7233"   # gRPC: workers/clients on the host (dev, tests)
+      - "127.0.0.1:8233:8233"   # Web UI
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "127.0.0.1:7233"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # Telegram long-poll bot: saves your messages, hands them to Temporal (T-06/T-07).
+  bot:
+    build: { context: ., dockerfile: docker/app.Dockerfile }
+    image: mini-instinct-app
+    command: ["python", "-m", "app.bot"]
+    env_file: [{ path: .env, required: false }]
+    depends_on: { temporal: { condition: service_healthy } }
+    restart: unless-stopped
+
+  # Temporal worker for the "agent" task queue: conversation workflow + agent activities (T-07+).
+  worker-agent:
+    image: mini-instinct-app
+    command: ["python", "-m", "app.worker", "agent"]
+    env_file: [{ path: .env, required: false }]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    volumes:
+      - secrets:/secrets          # local encrypted secrets store (T-04)
+    depends_on: { temporal: { condition: service_healthy } }
+    restart: unless-stopped
+
+  # The virtual browser: Chrome you can watch at http://localhost:6080/vnc.html, driven by the "browser" worker.
+  browser:
+    build: { context: ., dockerfile: docker/browser.Dockerfile }
+    image: mini-instinct-browser
+    env_file: [{ path: .env, required: false }]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    volumes:
+      - browser-profile:/profile    # your logins (cookies, local storage). Never leaves this PC.
+    ports:
+      - "127.0.0.1:6080:6080"       # noVNC live view (password protected). VNC 5900 is never published.
+    shm_size: "1gb"                 # Chrome needs a big /dev/shm
+    depends_on: { temporal: { condition: service_healthy } }
+    restart: unless-stopped
+
+  # Throwaway Postgres for tests only (stands in for Supabase). Start: docker compose --profile test up -d testdb
+  testdb:
+    image: postgres:16-alpine
+    profiles: [test]
+    environment: { POSTGRES_PASSWORD: postgres }
+    ports:
+      - "127.0.0.1:54329:5432"
+    tmpfs: [/var/lib/postgresql/data]   # in memory: wiped on every restart
+
+volumes:
+  temporal-data:   # Temporal state: workflows, timers, scheduled tasks. Back it up (T-36).
+  secrets:         # encrypted secrets.db. Never leaves this PC.
+  browser-profile: # Chrome profile = your logged-in sessions. Treat like your laptop.

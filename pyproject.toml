@@ -1,0 +1,28 @@
+[project]
+name = "mini-instinct"
+version = "0.1.0"
+description = "Self-hosted personal agent on Telegram (a small Instinct clone)"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx",
+    "psycopg[binary,pool]",
+    "temporalio",
+    "cryptography",
+    "google-auth",
+    "google-auth-oauthlib",
+    "google-api-python-client",
+    "playwright",
+    "jsonschema",
+    "tzdata",  # IANA timezones for zoneinfo (Windows and slim images have none)
+]
+
+[dependency-groups]
+dev = ["pytest", "pytest-asyncio"]
+
+[tool.uv]
+package = false  # run from the repo root; no build step needed
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"

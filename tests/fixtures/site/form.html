@@ -1,0 +1,9 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Contact</title></head>
+<body>
+  <form onsubmit="event.preventDefault(); document.getElementById('out').textContent = 'Thanks, ' + document.getElementById('name').value; document.title = 'Sent';">
+    <input id="name" placeholder="Your name">
+    <button type="submit">Send</button>
+  </form>
+  <p id="out"></p>
+</body></html>
