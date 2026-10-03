@@ -1,4 +1,7 @@
-# Mini-Instinct
+# Extinct
+
+<img width="9315" height="5871" alt="Untitled-2025-08-28-0355 (1)" src="https://github.com/user-attachments/assets/473f9540-2eae-462c-a47e-318d6ad4dac0" />
+
 
 A self-hosted personal agent you text on **Telegram**. It uses **its own Chrome** (which you can watch and take over), your **Gmail**, and runs **reminders and scheduled tasks**. Everything runs on your PC with Docker, on **free AI models**.
 
